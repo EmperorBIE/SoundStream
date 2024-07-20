@@ -13,6 +13,8 @@ from einops import rearrange, repeat, reduce, pack, unpack
 
 from einx import get_at
 
+import pdb
+
 # helper functions
 
 def exists(val):
@@ -32,7 +34,7 @@ class SelfResidualVQ(nn.Module):
         self,
         *,
         dim,
-        num_quantizes = 1,
+        num_quantizers = 1,
         codebook_dim = None,
         use_cosine_sim = True,
         shared_codebook = False,
@@ -53,12 +55,13 @@ class SelfResidualVQ(nn.Module):
         self.project_out = nn.Linear(codebook_input_dim, dim) if requires_projection else nn.Identity()
         self.has_projections = requires_projection
 
-        self.num_quantizers = num_quantizes
+        self.num_quantizers = num_quantizers
 
         self.accept_image_fmap = accept_image_fmap
+
         self.layer = VectorQuantize(dim=codebook_dim, codebook_dim=codebook_dim, use_cosine_sim = use_cosine_sim, accept_image_fmap=accept_image_fmap, **kwargs)
 
-        self.quantize_dropout = quantize_dropout and num_quantizes > 1
+        self.quantize_dropout = quantize_dropout and num_quantizers > 1
 
         assert quantize_dropout_cutoff_index >= 0
 
@@ -69,7 +72,7 @@ class SelfResidualVQ(nn.Module):
         self,
         x,
         indices=None,
-        return_all_codes=False,
+        return_all_codes=False, # TODO: Extend code when need to return all codes.
         sample_codebook_temp=None,
         freeze_codebook=False,
         mask=None,
@@ -77,7 +80,7 @@ class SelfResidualVQ(nn.Module):
         residual = self.project_in(x)
         all_indices = []
         commit_losses = []
-        quantized = []
+        quantized = 0.
 
         for _ in range(self.num_quantizers):
             quantized_output, indices, commit_loss = self.layer(
@@ -90,25 +93,19 @@ class SelfResidualVQ(nn.Module):
 
             all_indices.append(indices)
             commit_losses.append(commit_loss)
-            quantized.append(quantized_output)
+            quantized = quantized + quantized_output
 
-        quantized = torch.stack(quantized)
-        commit_losses = torch.stack(commit_losses)
-        all_indices = torch.stack(all_indices)
+        commit_losses = torch.stack(commit_losses, dim=-1)
+        all_indices = torch.stack(all_indices, dim=-1)
 
         quantized = self.project_out(quantized)
-        quantized = rearrange(quantized, 'n 1 c w -> n c w')
-        all_indices = rearrange(all_indices, 'n 1 w -> 1 w n')
-        commit_losses = rearrange(commit_losses, 'n 1 -> 1 n')
 
-        quantized = torch.sum(quantized, dim=0, keepdim=True)
-
-        return quantized, all_indices, commit_losses
+        return quantized, commit_losses, all_indices #[4, 50, 50], [4, 50, 1], [1, 1]
 
 if __name__ == '__main__':
     self_residual_vq = SelfResidualVQ(
         dim = 256,
-        num_quantizes = 8,       # times to do quantize
+        num_quantizers = 8,       # times to do quantize
         codebook_size = 1024,    # codebook size
     )
 

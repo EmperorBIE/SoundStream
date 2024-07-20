@@ -148,14 +148,14 @@ class SoundStream(nn.Module):
         super().__init__()
 
         self.encoder = Encoder(C=C, D=D)
-        '''
-        self.quantizer = ResidualVQ(
-            num_quantizers=n_q, dim=D, codebook_size=codebook_size,
-            kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
-        )
-        '''
+        
+        # self.quantizer = ResidualVQ(
+        #     num_quantizers=n_q, dim=D, codebook_size=codebook_size,
+        #     kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
+        # )
+        
         self.quantizer = SelfResidualVQ(
-            num_quantizers=n_q, dim=D, codebook_dim=codebook_size,
+            num_quantizers=n_q, dim=D, codebook_size=codebook_size,
             kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
         )
         
