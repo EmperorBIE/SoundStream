@@ -12,6 +12,8 @@ from dataset import *
 import pdb
 import torchaudio
 import random
+import os
+import matplotlib.pyplot as plt
 
 # def collate_fn(batch):
 #     print("batch size:", len(batch))
@@ -84,6 +86,41 @@ def adversarial_d_loss(features_stft_disc_x, features_wave_disc_x, features_stft
     
     return real_loss + generated_loss
 
+def ensure_path_exists(path):
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+def show_loss(history):
+    log_file_path = "./loss/loss_history.log"
+    ensure_path_exists(log_file_path)
+
+    with open(log_file_path, 'w') as log_file:
+        history_json = json.dumps(history, indent=4)
+        log_file.write(history_json)
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(history["train"]["d"], label='Train Discriminator Loss')
+    plt.plot(history["train"]["g"], label='Train Generator Loss')
+    plt.plot(history["valid"]["d"], label='Validation Discriminator Loss')
+    plt.plot(history["valid"]["g"], label='Validation Generator Loss')
+    plt.plot(history["valid"]["both"], label='Validation Total Loss')
+    plt.plot(history["test"]["d"], label='Test Discriminator Loss')
+    plt.plot(history["test"]["g"], label='Test Generator Loss')
+
+    plt.legend()
+    plt.title('Losses over Epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(True)
+
+    save_path = "./loss/losses_over_epochs.png"
+    ensure_path_exists(save_path)
+    plt.savefig(save_path)
+
+    plt.show()
+
 if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -91,7 +128,7 @@ if __name__ == '__main__':
     LAMBDA_ADV = 1
     LAMBDA_FEAT = 100
     LAMBDA_REC = 1
-    N_EPOCHS = 1
+    N_EPOCHS = 5
     BATCH_SIZE = 4 # 4
 
     soundstream = SoundStream(C=1, D=150, n_q=1, codebook_size=1)
@@ -125,11 +162,15 @@ if __name__ == '__main__':
     criterion_d = adversarial_d_loss
 
     best_model = soundstream.state_dict().copy()
-    best_val_loss = float("inf")
+    best_val_loss_g = float("inf")
+    best_val_loss_d = float("inf")
+    best_val_loss_both = float("inf")
+
+    early_stop = False
 
     history = {
         "train": {"d": [], "g": []},
-        "valid": {"d": [], "g": []},
+        "valid": {"d": [], "g": [], "both": []},
         "test": {"d": [], "g": []}
     }
 
@@ -224,13 +265,35 @@ if __name__ == '__main__':
                 
                 valid_loss_d += loss_d.item()
             
-            if valid_loss_g < best_val_loss:
-                best_model = soundstream.state_dict().copy()
-                best_val_loss = valid_loss_g
-                torch.save(best_model, './model/best_model.pth'.format(epoch))
-            
             history["valid"]["d"].append(valid_loss_d/len(valid_loader))
             history["valid"]["g"].append(valid_loss_g/len(valid_loader))
+            history["valid"]["both"].append(valid_loss_d/len(valid_loader) + valid_loss_g/len(valid_loader))
+
+            if best_val_loss_d > history["valid"]["d"][-1]:
+                best_model = soundstream.state_dict().copy()
+                save_path = f'./model/best_model_g/best_model_g_{epoch}.pth'
+                ensure_path_exists(save_path)
+                torch.save(best_model, save_path)
+        
+            if best_val_loss_g > history["valid"]["g"][-1]:
+                best_model = soundstream.state_dict().copy()
+                save_path = f'./model/best_model_g/best_model_g_{epoch}.pth'
+                ensure_path_exists(save_path)
+                torch.save(best_model, save_path)
+
+            if best_val_loss_both > history["valid"]["both"][-1]:
+                best_model = soundstream.state_dict().copy()
+                save_path = f'./model/best_model_both/best_model_both_{epoch}.pth'
+                ensure_path_exists(save_path)
+                torch.save(best_model, save_path)
+
+            if len(history["valid"]["both"]) > 2:
+                loss_diff_both_1 = history["valid"]["both"][-2] - history["valid"]["both"][-1]
+                loss_diff_both_2 = history["valid"]["both"][-3] - history["valid"]["both"][-2]
+                if loss_diff_both_1 < 0 or loss_diff_both_2 < 0:
+                    early_stop = True
+                elif abs(loss_diff_both_2-loss_diff_both_1) < 0.05:
+                    early_stop = True
         
         with torch.no_grad():
             stft_disc.eval()
@@ -274,5 +337,7 @@ if __name__ == '__main__':
             history["test"]["d"].append(test_loss_d/len(test_loader))
             history["test"]["g"].append(test_loss_g/len(test_loader))
                 
-                
-            
+        if early_stop:
+            break
+    
+    show_loss(history)
