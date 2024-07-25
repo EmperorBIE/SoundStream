@@ -144,20 +144,21 @@ class Decoder(nn.Module):
 
 
 class SoundStream(nn.Module):
-    def __init__(self, C, D, n_q, codebook_size):
+    def __init__(self, C, D, n_q, codebook_size, use_srvq):
         super().__init__()
 
         self.encoder = Encoder(C=C, D=D)
         
-        # self.quantizer = ResidualVQ(
-        #     num_quantizers=n_q, dim=D, codebook_size=codebook_size,
-        #     kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
-        # )
-        
-        self.quantizer = SelfResidualVQ(
-            num_quantizers=n_q, dim=D, codebook_size=codebook_size,
-            kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
-        )
+        if use_srvq:
+            self.quantizer = SelfResidualVQ(
+                num_quantizers=n_q, dim=D, codebook_size=codebook_size,
+                kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
+            )
+        else:
+            self.quantizer = ResidualVQ(
+                num_quantizers=n_q, dim=D, codebook_size=codebook_size,
+                kmeans_init=True, kmeans_iters=100, threshold_ema_dead_code=2
+            )
         
         self.decoder = Decoder(C=C, D=D)
     

@@ -13,17 +13,9 @@ import pdb
 import torchaudio
 import random
 import os
+import argparse
+import sys
 import matplotlib.pyplot as plt
-
-# def collate_fn(batch):
-#     print("batch size:", len(batch))
-#     for data in batch:
-#         print(data.shape)
-#     # pdb.set_trace()
-#     lengths = torch.tensor([elem.shape[-1] for elem in batch])
-#     print("lengths: ", lengths)
-#     print("shape after preprocess: ", nn.utils.rnn.pad_sequence(batch, batch_first=True))
-#     return nn.utils.rnn.pad_sequence(batch, batch_first=True), lengths
 
 def collate_fn(batch):
     length=48000
@@ -123,15 +115,23 @@ def show_loss(history):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description="process parameters")
+    parser.add_argument('-srvq', action='store_true', help='use self residual quantizer')
+    args = parser.parse_args()
+
+    use_srvq = False
+    if args.srvq:
+        use_srvq = True
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     LAMBDA_ADV = 1
     LAMBDA_FEAT = 100
     LAMBDA_REC = 1
-    N_EPOCHS = 5
-    BATCH_SIZE = 4 # 4
+    N_EPOCHS = 15
+    BATCH_SIZE = 32 # 4
 
-    soundstream = SoundStream(C=1, D=150, n_q=1, codebook_size=1)
+    soundstream = SoundStream(C=1, D=150, n_q=1, codebook_size=1, use_srvq=use_srvq)
     wave_disc = WaveDiscriminator(num_D=3, downsampling_factor=2)
     W, H = 1024, 256
     stft_disc = STFTDiscriminator(C=1, F_bins=W//2)
@@ -271,7 +271,7 @@ if __name__ == '__main__':
 
             if best_val_loss_d > history["valid"]["d"][-1]:
                 best_model = soundstream.state_dict().copy()
-                save_path = f'./model/best_model_g/best_model_g_{epoch}.pth'
+                save_path = f'./model/best_model_d/best_model_d_{epoch}.pth'
                 ensure_path_exists(save_path)
                 torch.save(best_model, save_path)
         
