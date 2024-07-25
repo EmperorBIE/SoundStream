@@ -83,7 +83,7 @@ def ensure_path_exists(path):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-def show_loss(history):
+def show_loss(history, rootname):
     log_file_path = "./loss/loss_history.log"
     ensure_path_exists(log_file_path)
 
@@ -107,7 +107,7 @@ def show_loss(history):
     plt.ylabel('Loss')
     plt.grid(True)
 
-    save_path = "./loss/losses_over_epochs.png"
+    save_path = f"./loss/{rootname}/losses_over_epochs.png"
     ensure_path_exists(save_path)
     plt.savefig(save_path)
 
@@ -120,8 +120,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     use_srvq = False
+    rootname = "rvq"
     if args.srvq:
         use_srvq = True
+        rootname = "srvq"
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -271,19 +273,19 @@ if __name__ == '__main__':
 
             if best_val_loss_d > history["valid"]["d"][-1]:
                 best_model = soundstream.state_dict().copy()
-                save_path = f'./model/best_model_d/best_model_d_{epoch}.pth'
+                save_path = f'./model/{rootname}/best_model_d/best_model_d_{epoch}.pth'
                 ensure_path_exists(save_path)
                 torch.save(best_model, save_path)
         
             if best_val_loss_g > history["valid"]["g"][-1]:
                 best_model = soundstream.state_dict().copy()
-                save_path = f'./model/best_model_g/best_model_g_{epoch}.pth'
+                save_path = f'./model/{rootname}/best_model_g/best_model_g_{epoch}.pth'
                 ensure_path_exists(save_path)
                 torch.save(best_model, save_path)
 
             if best_val_loss_both > history["valid"]["both"][-1]:
                 best_model = soundstream.state_dict().copy()
-                save_path = f'./model/best_model_both/best_model_both_{epoch}.pth'
+                save_path = f'./model/{rootname}/best_model_both/best_model_both_{epoch}.pth'
                 ensure_path_exists(save_path)
                 torch.save(best_model, save_path)
 
@@ -340,4 +342,4 @@ if __name__ == '__main__':
         if early_stop:
             break
     
-    show_loss(history)
+    show_loss(history, rootname)
