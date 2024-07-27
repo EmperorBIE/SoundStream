@@ -84,7 +84,7 @@ def ensure_path_exists(path):
         os.makedirs(directory)
 
 def save_loss(history, rootname):
-    log_file_path = "./loss/loss_history.log"
+    log_file_path = f"./loss/{rootname}/loss_history.log"
     ensure_path_exists(log_file_path)
 
     with open(log_file_path, 'w') as log_file:
@@ -233,8 +233,8 @@ if __name__ == '__main__':
         
         history["train"]["d"].append(train_loss_d/len(train_loader))
         history["train"]["g"].append(train_loss_g/len(train_loader))
-        print(f"epoch:{epoch} train_loss_d:{history["train"]["d"][-1]}")
-        print(f"epoch:{epoch} train_loss_g:{history["train"]["g"][-1]}")
+        print(f'epoch:{epoch} train_loss_d:{history["train"]["d"][-1]}')
+        print(f'epoch:{epoch} train_loss_g:{history["train"]["g"][-1]}')
         
         with torch.no_grad():
             stft_disc.eval()
@@ -278,9 +278,9 @@ if __name__ == '__main__':
             history["valid"]["d"].append(valid_loss_d/len(valid_loader))
             history["valid"]["g"].append(valid_loss_g/len(valid_loader))
             history["valid"]["both"].append(valid_loss_d/len(valid_loader) + valid_loss_g/len(valid_loader))
-            print(f"epoch:{epoch} valid_loss_d:{history["valid"]["d"][-1]}")
-            print(f"epoch:{epoch} valid_loss_g:{history["valid"]["g"][-1]}")
-            print(f"epoch:{epoch} valid_loss_both:{history["valid"]["both"][-1]}")
+            print(f'epoch:{epoch} valid_loss_d:{history["valid"]["d"][-1]}')
+            print(f'epoch:{epoch} valid_loss_g:{history["valid"]["g"][-1]}')
+            print(f'epoch:{epoch} valid_loss_both:{history["valid"]["both"][-1]}')
 
             if best_val_loss_d > history["valid"]["d"][-1]:
                 best_model = soundstream.state_dict().copy()
@@ -349,11 +349,11 @@ if __name__ == '__main__':
             
             history["test"]["d"].append(test_loss_d/len(test_loader))
             history["test"]["g"].append(test_loss_g/len(test_loader))
-            print(f"epoch:{epoch} test_loss_d:{history["test"]["d"][-1]}")
-            print(f"epoch:{epoch} test_loss_g:{history["test"]["g"][-1]}")
+            print(f'epoch:{epoch} test_loss_d:{history["test"]["d"][-1]}')
+            print(f'epoch:{epoch} test_loss_g:{history["test"]["g"][-1]}')
 
         save_loss(history, rootname)
-          
+
         if early_stop:
             print("early stopped")
             break
