@@ -83,7 +83,7 @@ def ensure_path_exists(path):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-def show_loss(history, rootname):
+def save_loss(history, rootname):
     log_file_path = "./loss/loss_history.log"
     ensure_path_exists(log_file_path)
 
@@ -93,25 +93,31 @@ def show_loss(history, rootname):
 
     plt.figure(figsize=(10, 5))
 
-    plt.plot(history["train"]["d"], label='Train Discriminator Loss')
-    plt.plot(history["train"]["g"], label='Train Generator Loss')
-    plt.plot(history["valid"]["d"], label='Validation Discriminator Loss')
-    plt.plot(history["valid"]["g"], label='Validation Generator Loss')
-    plt.plot(history["valid"]["both"], label='Validation Total Loss')
-    plt.plot(history["test"]["d"], label='Test Discriminator Loss')
     plt.plot(history["test"]["g"], label='Test Generator Loss')
-
     plt.legend()
-    plt.title('Losses over Epochs')
+    plt.title('Generator Losses over Epochs')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.grid(True)
 
-    save_path = f"./loss/{rootname}/losses_over_epochs.png"
-    ensure_path_exists(save_path)
-    plt.savefig(save_path)
+    save_path_g = f"./loss/{rootname}/generator_losses_over_epochs.png"
+    ensure_path_exists(save_path_g)
+    plt.savefig(save_path_g)
 
-    plt.show()
+    plt.figure(figsize=(10, 5))
+    plt.plot(history["train"]["d"], label='Train Discriminator Loss')
+    plt.plot(history["valid"]["d"], label='Validation Discriminator Loss')
+    plt.plot(history["test"]["d"], label='Test Discriminator Loss')
+    plt.legend()
+    plt.title('Discriminator Losses over Epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid(True)
+
+    save_path_d = f"./loss/{rootname}/discriminator_losses_over_epochs.png"
+    ensure_path_exists(save_path_d)
+    plt.savefig(save_path_d)
+
 
 if __name__ == '__main__':
 
@@ -130,8 +136,8 @@ if __name__ == '__main__':
     LAMBDA_ADV = 1
     LAMBDA_FEAT = 100
     LAMBDA_REC = 1
-    N_EPOCHS = 15
-    BATCH_SIZE = 32 # 4
+    N_EPOCHS = 60
+    BATCH_SIZE = 64 # 4
 
     soundstream = SoundStream(C=1, D=150, n_q=1, codebook_size=1, use_srvq=use_srvq)
     wave_disc = WaveDiscriminator(num_D=3, downsampling_factor=2)
@@ -227,6 +233,8 @@ if __name__ == '__main__':
         
         history["train"]["d"].append(train_loss_d/len(train_loader))
         history["train"]["g"].append(train_loss_g/len(train_loader))
+        print(f"epoch:{epoch} train_loss_d:{history["train"]["d"][-1]}")
+        print(f"epoch:{epoch} train_loss_g:{history["train"]["g"][-1]}")
         
         with torch.no_grad():
             stft_disc.eval()
@@ -270,6 +278,9 @@ if __name__ == '__main__':
             history["valid"]["d"].append(valid_loss_d/len(valid_loader))
             history["valid"]["g"].append(valid_loss_g/len(valid_loader))
             history["valid"]["both"].append(valid_loss_d/len(valid_loader) + valid_loss_g/len(valid_loader))
+            print(f"epoch:{epoch} valid_loss_d:{history["valid"]["d"][-1]}")
+            print(f"epoch:{epoch} valid_loss_g:{history["valid"]["g"][-1]}")
+            print(f"epoch:{epoch} valid_loss_both:{history["valid"]["both"][-1]}")
 
             if best_val_loss_d > history["valid"]["d"][-1]:
                 best_model = soundstream.state_dict().copy()
@@ -289,7 +300,7 @@ if __name__ == '__main__':
                 ensure_path_exists(save_path)
                 torch.save(best_model, save_path)
 
-            if len(history["valid"]["both"]) > 2:
+            if len(history["valid"]["both"]) > 30:
                 loss_diff_both_1 = history["valid"]["both"][-2] - history["valid"]["both"][-1]
                 loss_diff_both_2 = history["valid"]["both"][-3] - history["valid"]["both"][-2]
                 if loss_diff_both_1 < 0 or loss_diff_both_2 < 0:
@@ -338,8 +349,12 @@ if __name__ == '__main__':
             
             history["test"]["d"].append(test_loss_d/len(test_loader))
             history["test"]["g"].append(test_loss_g/len(test_loader))
-                
+            print(f"epoch:{epoch} test_loss_d:{history["test"]["d"][-1]}")
+            print(f"epoch:{epoch} test_loss_g:{history["test"]["g"][-1]}")
+
+        save_loss(history, rootname)
+          
         if early_stop:
+            print("early stopped")
             break
     
-    show_loss(history, rootname)
