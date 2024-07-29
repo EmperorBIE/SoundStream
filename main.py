@@ -151,16 +151,16 @@ if __name__ == '__main__':
     torchaudio.set_audio_backend("soundfile")
 
     # train_dataset = NSynthDataset(audio_dir="./data/nsynth-train.jsonwav/nsynth-train/audio")
-    train_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_train.json")
+    train_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_train.json", group_id=[1,2])
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn, num_workers=1)
     sr = train_dataset.sr
 
     # valid_dataset = NSynthDataset(audio_dir="./data/nsynth-valid.jsonwav/nsynth-valid/audio")
-    valid_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_valid.json")
+    valid_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_valid.json", group_id=[1,2])
     valid_loader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn, num_workers=1)
 
     # test_dataset = NSynthDataset(audio_dir="./data/nsynth-test.jsonwav/nsynth-test/audio")
-    test_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_test.json")
+    test_dataset = JsonDataset(json_dir="/home3/hexin/speechbrain/recipes/VoxLingua107/lang_id/fleurs_test.json", group_id=[1,2])
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, collate_fn=collate_fn, num_workers=1)
 
     optimizer_g = optim.Adam(soundstream.parameters(), lr=1e-4, betas=(0.5, 0.9))
